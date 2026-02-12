@@ -164,6 +164,106 @@ DISRUPTION_PROFILES = {
         "recovery_rate": 0.1,
         "cost_escalation": 0.15,
     },
+    "demand_collapse": {
+        "capacity_reduction_range": (0.0, 0.0),
+        "delay_factor_range": (1.0, 1.0),
+        "recovery_rate": 0.03,
+        "cost_escalation": 0.05,
+    },
+
+    # Pandemic / Health
+    "pandemic": {
+        "capacity_reduction_range": (0.3, 0.7),
+        "delay_factor_range": (1.5, 4.0),
+        "recovery_rate": 0.01,
+        "cost_escalation": 0.35,
+    },
+
+    # Cyber
+    "cyberattack": {
+        "capacity_reduction_range": (0.4, 1.0),
+        "delay_factor_range": (1.0, 2.0),
+        "recovery_rate": 0.04,
+        "cost_escalation": 0.20,
+    },
+    "ransomware": {
+        "capacity_reduction_range": (0.7, 1.0),
+        "delay_factor_range": (1.0, 1.5),
+        "recovery_rate": 0.03,
+        "cost_escalation": 0.25,
+    },
+
+    # Environmental / Climate
+    "wildfire": {
+        "capacity_reduction_range": (0.4, 0.9),
+        "delay_factor_range": (1.5, 4.0),
+        "recovery_rate": 0.03,
+        "cost_escalation": 0.12,
+    },
+    "drought": {
+        "capacity_reduction_range": (0.1, 0.4),
+        "delay_factor_range": (1.0, 1.5),
+        "recovery_rate": 0.02,
+        "cost_escalation": 0.10,
+    },
+    "volcanic_eruption": {
+        "capacity_reduction_range": (0.5, 1.0),
+        "delay_factor_range": (2.0, 6.0),
+        "recovery_rate": 0.015,
+        "cost_escalation": 0.25,
+    },
+
+    # Geopolitical extended
+    "regime_change": {
+        "capacity_reduction_range": (0.3, 0.8),
+        "delay_factor_range": (2.0, 6.0),
+        "recovery_rate": 0.01,
+        "cost_escalation": 0.35,
+    },
+    "export_controls": {
+        "capacity_reduction_range": (0.5, 0.9),
+        "delay_factor_range": (1.5, 3.0),
+        "recovery_rate": 0.008,
+        "cost_escalation": 0.30,
+    },
+
+    # Infrastructure / Energy
+    "power_grid_failure": {
+        "capacity_reduction_range": (0.6, 1.0),
+        "delay_factor_range": (1.0, 2.0),
+        "recovery_rate": 0.06,
+        "cost_escalation": 0.15,
+    },
+    "energy_crisis": {
+        "capacity_reduction_range": (0.2, 0.5),
+        "delay_factor_range": (1.2, 2.5),
+        "recovery_rate": 0.02,
+        "cost_escalation": 0.40,
+    },
+
+    # Regulatory
+    "regulatory_ban": {
+        "capacity_reduction_range": (0.8, 1.0),
+        "delay_factor_range": (1.0, 1.5),
+        "recovery_rate": 0.005,
+        "cost_escalation": 0.20,
+    },
+
+    # Financial
+    "currency_crisis": {
+        "capacity_reduction_range": (0.1, 0.3),
+        "delay_factor_range": (1.2, 2.0),
+        "recovery_rate": 0.02,
+        "cost_escalation": 0.45,
+    },
+
+    # Labor
+    "mass_resignation": {
+        "capacity_reduction_range": (0.3, 0.7),
+        "delay_factor_range": (1.1, 1.5),
+        "recovery_rate": 0.02,
+        "cost_escalation": 0.20,
+    },
 }
 
 
@@ -445,8 +545,9 @@ class SimulationEngine:
         return recs
 
     def run_preset_scenario(self, scenario_name: str) -> SimulationOutput:
-        """Run one of the 5 preset MVP scenarios."""
+        """Run one of the 20 preset disruption scenarios."""
         presets = {
+            # --- Original 5 ---
             "taiwan_strait_closure": DisruptionScenario(
                 disruption_type="strait_closure",
                 severity=0.8,
@@ -481,6 +582,143 @@ class SimulationEngine:
                 duration_days=45,
                 demand_change_pct=0.5,
                 description="50% demand surge from market shock",
+            ),
+
+            # --- 15 New Scenarios ---
+
+            # 6. South Korea semiconductor fab fire
+            "korea_fab_fire": DisruptionScenario(
+                disruption_type="factory_fire",
+                severity=0.85,
+                duration_days=45,
+                affected_countries=["South Korea"],
+                description="Major fire at Korean semiconductor fabrication plant disrupting display and chip supply",
+            ),
+
+            # 7. Global pandemic wave
+            "global_pandemic": DisruptionScenario(
+                disruption_type="pandemic",
+                severity=0.6,
+                duration_days=120,
+                affected_countries=["China", "Vietnam", "India", "Mexico"],
+                description="Global pandemic wave causing factory shutdowns and labor shortages across manufacturing hubs",
+            ),
+
+            # 8. China rare earth export controls
+            "china_rare_earth_ban": DisruptionScenario(
+                disruption_type="export_controls",
+                severity=0.75,
+                duration_days=365,
+                affected_countries=["China"],
+                description="China restricts rare earth mineral exports critical for electronics and battery manufacturing",
+            ),
+
+            # 9. Ransomware on logistics provider
+            "logistics_ransomware": DisruptionScenario(
+                disruption_type="ransomware",
+                severity=0.8,
+                duration_days=21,
+                affected_edge_ids=["r-shenzhen-la", "r-shenzhen-rotterdam", "r-busan-la"],
+                description="Ransomware attack on major shipping carrier disabling booking and tracking systems",
+            ),
+
+            # 10. Vietnam flooding
+            "vietnam_flooding": DisruptionScenario(
+                disruption_type="flooding",
+                severity=0.7,
+                duration_days=30,
+                affected_countries=["Vietnam"],
+                description="Monsoon flooding submerges PCB assembly facilities in northern Vietnam",
+            ),
+
+            # 11. Malacca Strait piracy / military blockade
+            "malacca_strait_closure": DisruptionScenario(
+                disruption_type="strait_closure",
+                severity=0.65,
+                duration_days=60,
+                affected_edge_ids=["r-lithium-au-battery"],
+                description="Military tensions close Strait of Malacca disrupting Australia-Asia raw material routes",
+            ),
+
+            # 12. European energy crisis
+            "european_energy_crisis": DisruptionScenario(
+                disruption_type="energy_crisis",
+                severity=0.55,
+                duration_days=150,
+                affected_countries=["Germany"],
+                description="European natural gas shortage causing rolling blackouts and production curtailment in German manufacturing",
+            ),
+
+            # 13. Mexico labor strike
+            "mexico_labor_strike": DisruptionScenario(
+                disruption_type="labor_strike",
+                severity=0.7,
+                duration_days=28,
+                affected_countries=["Mexico"],
+                description="Nationwide labor strike halting assembly operations across Mexican manufacturing plants",
+            ),
+
+            # 14. Taiwan chip supplier bankruptcy
+            "taiwan_supplier_bankruptcy": DisruptionScenario(
+                disruption_type="bankruptcy",
+                severity=1.0,
+                duration_days=180,
+                affected_node_ids=["t3-silicon-tw"],
+                description="Key Taiwan semiconductor wafer supplier files for bankruptcy, permanently removing capacity",
+            ),
+
+            # 15. India power grid failure
+            "india_grid_failure": DisruptionScenario(
+                disruption_type="power_grid_failure",
+                severity=0.8,
+                duration_days=14,
+                affected_countries=["India"],
+                description="Cascading power grid failure across Indian states disrupts assembly hub operations",
+            ),
+
+            # 16. Panama Canal drought restrictions
+            "panama_canal_drought": DisruptionScenario(
+                disruption_type="drought",
+                severity=0.5,
+                duration_days=90,
+                affected_edge_ids=["r-chips-assembly-mx"],
+                description="Severe drought restricts Panama Canal transit capacity reducing Asia-Americas shipping throughput by 50%",
+            ),
+
+            # 17. US-China full trade embargo
+            "us_china_trade_embargo": DisruptionScenario(
+                disruption_type="trade_embargo",
+                severity=0.85,
+                duration_days=365,
+                affected_countries=["China"],
+                description="Full trade embargo between US and China cutting off all direct supplier relationships",
+            ),
+
+            # 18. Australia wildfire
+            "australia_wildfire": DisruptionScenario(
+                disruption_type="wildfire",
+                severity=0.75,
+                duration_days=45,
+                affected_countries=["Australia"],
+                description="Catastrophic wildfire season disrupts Australian lithium mining and port operations",
+            ),
+
+            # 19. Demand collapse (recession)
+            "global_recession": DisruptionScenario(
+                disruption_type="demand_collapse",
+                severity=0.6,
+                duration_days=180,
+                demand_change_pct=-0.4,
+                description="Global recession triggers 40% demand collapse causing inventory buildup and cash flow pressure",
+            ),
+
+            # 20. Cyberattack on port systems
+            "port_cyberattack": DisruptionScenario(
+                disruption_type="cyberattack",
+                severity=0.7,
+                duration_days=10,
+                affected_node_ids=["port-shenzhen", "port-kaohsiung"],
+                description="Coordinated cyberattack disables port management systems at Shenzhen and Kaohsiung",
             ),
         }
 

@@ -57,21 +57,44 @@ class RiskCategory(str, enum.Enum):
 
 
 class DisruptionType(str, enum.Enum):
+    # Geopolitical
     SANCTIONS = "sanctions"
     TRADE_EMBARGO = "trade_embargo"
     STRAIT_CLOSURE = "strait_closure"
     TARIFF = "tariff"
+    EXPORT_CONTROLS = "export_controls"
+    REGIME_CHANGE = "regime_change"
+    # Natural disaster
     EARTHQUAKE = "earthquake"
     HURRICANE = "hurricane"
     FLOODING = "flooding"
     WILDFIRE = "wildfire"
+    DROUGHT = "drought"
+    VOLCANIC_ERUPTION = "volcanic_eruption"
+    # Operational
     FACTORY_FIRE = "factory_fire"
     LABOR_STRIKE = "labor_strike"
     BANKRUPTCY = "bankruptcy"
+    MASS_RESIGNATION = "mass_resignation"
+    # Cyber
     CYBERATTACK = "cyberattack"
+    RANSOMWARE = "ransomware"
+    # Logistics
     PORT_CONGESTION = "port_congestion"
     CANAL_BLOCKAGE = "canal_blockage"
     SHIPPING_SHORTAGE = "shipping_shortage"
+    # Demand
+    DEMAND_SURGE = "demand_surge"
+    DEMAND_COLLAPSE = "demand_collapse"
+    # Pandemic / Health
+    PANDEMIC = "pandemic"
+    # Infrastructure / Energy
+    POWER_GRID_FAILURE = "power_grid_failure"
+    ENERGY_CRISIS = "energy_crisis"
+    # Regulatory
+    REGULATORY_BAN = "regulatory_ban"
+    # Financial
+    CURRENCY_CRISIS = "currency_crisis"
 
 
 # --- Models ---
