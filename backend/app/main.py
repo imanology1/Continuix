@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.dependencies import init_platform
-from app.api.routes import suppliers, network, simulation, risk, dashboard, optimization
+from app.api.routes import suppliers, network, simulation, risk, risk_data, dashboard, optimization
 from app.services.seed_data import build_demo_supply_chain
 
 log = structlog.get_logger()
@@ -58,6 +58,7 @@ app.include_router(suppliers.router, prefix="/api/v1")
 app.include_router(network.router, prefix="/api/v1")
 app.include_router(simulation.router, prefix="/api/v1")
 app.include_router(risk.router, prefix="/api/v1")
+app.include_router(risk_data.router, prefix="/api/v1")
 app.include_router(optimization.router, prefix="/api/v1")
 
 

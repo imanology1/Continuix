@@ -10,6 +10,12 @@ Continuously scores supply chain risk across five dimensions:
 
 Uses weighted composite scoring per the requirements:
   Risk = Geo*0.25 + Climate*0.20 + Financial*0.20 + Cyber*0.15 + Logistics*0.20
+
+Now backed by:
+- 190+ country baseline profiles (country_baseline.py)
+- External API data (World Bank, IMF, UNDP, Eurostat)
+- Flexible risk calculator for manual data entry
+- Manual override support for any dimension
 """
 
 from dataclasses import dataclass, field
@@ -18,40 +24,19 @@ from typing import Optional
 import numpy as np
 
 from app.core.config import settings
+from app.services.country_baseline import (
+    get_country_risk,
+    get_country_risk_by_iso,
+    get_all_countries,
+    get_country_profile,
+    search_countries,
+    COUNTRY_PROFILES,
+)
 
 
-# --- Country Risk Baselines ---
-# Based on composite of World Bank governance indicators, climate vulnerability,
-# geopolitical tension indices. Scale 0-100.
-
-COUNTRY_RISK_DATA = {
-    # Country: {geopolitical, climate, financial, cyber, logistics}
-    "United States": {"geopolitical": 15, "climate": 30, "financial": 10, "cyber": 20, "logistics": 15},
-    "China": {"geopolitical": 55, "climate": 35, "financial": 30, "cyber": 40, "logistics": 25},
-    "Taiwan": {"geopolitical": 70, "climate": 40, "financial": 15, "cyber": 35, "logistics": 20},
-    "Japan": {"geopolitical": 20, "climate": 55, "financial": 15, "cyber": 20, "logistics": 15},
-    "South Korea": {"geopolitical": 35, "climate": 30, "financial": 15, "cyber": 30, "logistics": 15},
-    "Germany": {"geopolitical": 10, "climate": 20, "financial": 10, "cyber": 15, "logistics": 10},
-    "India": {"geopolitical": 30, "climate": 50, "financial": 35, "cyber": 30, "logistics": 40},
-    "Vietnam": {"geopolitical": 25, "climate": 55, "financial": 40, "cyber": 25, "logistics": 35},
-    "Mexico": {"geopolitical": 35, "climate": 35, "financial": 30, "cyber": 25, "logistics": 30},
-    "Brazil": {"geopolitical": 25, "climate": 40, "financial": 35, "cyber": 20, "logistics": 35},
-    "Thailand": {"geopolitical": 25, "climate": 45, "financial": 30, "cyber": 20, "logistics": 30},
-    "Malaysia": {"geopolitical": 20, "climate": 40, "financial": 25, "cyber": 20, "logistics": 25},
-    "Indonesia": {"geopolitical": 20, "climate": 55, "financial": 35, "cyber": 25, "logistics": 40},
-    "Turkey": {"geopolitical": 45, "climate": 35, "financial": 45, "cyber": 30, "logistics": 30},
-    "Russia": {"geopolitical": 75, "climate": 25, "financial": 55, "cyber": 50, "logistics": 40},
-    "Ukraine": {"geopolitical": 80, "climate": 25, "financial": 60, "cyber": 45, "logistics": 55},
-    "Singapore": {"geopolitical": 10, "climate": 20, "financial": 5, "cyber": 15, "logistics": 10},
-    "Netherlands": {"geopolitical": 10, "climate": 25, "financial": 8, "cyber": 12, "logistics": 10},
-    "United Kingdom": {"geopolitical": 12, "climate": 20, "financial": 10, "cyber": 18, "logistics": 12},
-    "Canada": {"geopolitical": 10, "climate": 25, "financial": 8, "cyber": 15, "logistics": 15},
-    "Australia": {"geopolitical": 12, "climate": 45, "financial": 10, "cyber": 15, "logistics": 20},
-    "Saudi Arabia": {"geopolitical": 40, "climate": 30, "financial": 20, "cyber": 30, "logistics": 25},
-    "UAE": {"geopolitical": 30, "climate": 25, "financial": 15, "cyber": 25, "logistics": 15},
-    "Egypt": {"geopolitical": 40, "climate": 35, "financial": 45, "cyber": 30, "logistics": 35},
-    "South Africa": {"geopolitical": 30, "climate": 35, "financial": 35, "cyber": 25, "logistics": 35},
-}
+# Legacy alias — existing code that imports COUNTRY_RISK_DATA still works.
+# Now delegates to the 190+ country baseline.
+COUNTRY_RISK_DATA = {name: get_country_risk(name) for name in COUNTRY_PROFILES}
 
 DEFAULT_COUNTRY_RISK = {"geopolitical": 40, "climate": 40, "financial": 40, "cyber": 35, "logistics": 35}
 
@@ -75,6 +60,7 @@ class RiskAssessment:
 class RiskEngine:
     """
     Scores risk for supply chain entities using a weighted composite model.
+    Backed by 190+ country profiles with external API integration.
     """
 
     def __init__(
@@ -92,6 +78,30 @@ class RiskEngine:
             "cyber": cyber_weight,
             "logistics": logistics_weight,
         }
+        # Manual overrides storage: country -> {dimension: score}
+        self._manual_overrides: dict[str, dict[str, float]] = {}
+
+    def set_country_override(self, country: str, dimension: str, score: float):
+        """Set a manual risk score override for a country + dimension."""
+        if country not in self._manual_overrides:
+            self._manual_overrides[country] = {}
+        self._manual_overrides[country][dimension] = max(0, min(100, score))
+
+    def clear_country_override(self, country: str, dimension: Optional[str] = None):
+        """Clear manual override for a country (all dimensions or specific one)."""
+        if dimension:
+            self._manual_overrides.get(country, {}).pop(dimension, None)
+        else:
+            self._manual_overrides.pop(country, None)
+
+    def get_country_baseline(self, country: str) -> dict[str, float]:
+        """Get risk baseline for a country, with manual overrides applied."""
+        baseline = get_country_risk(country)
+        overrides = self._manual_overrides.get(country, {})
+        for dim, val in overrides.items():
+            if dim in baseline:
+                baseline[dim] = val
+        return baseline
 
     def score_supplier(
         self,
@@ -108,7 +118,7 @@ class RiskEngine:
         """
         Score a supplier across all risk dimensions.
         """
-        country_baseline = COUNTRY_RISK_DATA.get(country, DEFAULT_COUNTRY_RISK)
+        country_baseline = self.get_country_baseline(country)
 
         # Geopolitical: country baseline + tier modifier
         tier_multiplier = {"tier_1": 1.0, "tier_2": 1.1, "tier_3": 1.2, "tier_4": 1.3}.get(tier, 1.0)
@@ -193,7 +203,7 @@ class RiskEngine:
         utilization: float = 0.7,
     ) -> RiskAssessment:
         """Score risk for a facility."""
-        country_baseline = COUNTRY_RISK_DATA.get(country, DEFAULT_COUNTRY_RISK)
+        country_baseline = self.get_country_baseline(country)
 
         geo = country_baseline["geopolitical"]
         climate = max(country_baseline["climate"], natural_hazard_exposure)
@@ -251,8 +261,8 @@ class RiskEngine:
         transit_time_days: float = 5.0,
     ) -> RiskAssessment:
         """Score risk for a transport route."""
-        origin_risk = COUNTRY_RISK_DATA.get(origin_country, DEFAULT_COUNTRY_RISK)
-        dest_risk = COUNTRY_RISK_DATA.get(destination_country, DEFAULT_COUNTRY_RISK)
+        origin_risk = self.get_country_baseline(origin_country)
+        dest_risk = self.get_country_baseline(destination_country)
 
         # Average of origin and destination
         geo = (origin_risk["geopolitical"] + dest_risk["geopolitical"]) / 2
@@ -342,3 +352,32 @@ class RiskEngine:
             "by_country": {k: round(float(np.mean(v)), 1) for k, v in by_country.items()},
             "by_type": {k: round(float(np.mean(v)), 1) for k, v in by_type.items()},
         }
+
+    def get_country_count(self) -> int:
+        """Return total number of countries with risk profiles."""
+        return len(COUNTRY_PROFILES)
+
+    def list_countries(self, region: Optional[str] = None) -> list[dict]:
+        """List all available countries, optionally filtered by region."""
+        countries = get_all_countries()
+        if region:
+            countries = [c for c in countries if c["region"] == region or c["sub_region"] == region]
+        return countries
+
+    def search_country(self, query: str) -> list[dict]:
+        """Search countries by name or ISO code."""
+        results = search_countries(query)
+        return [
+            {
+                "iso3": p.iso3,
+                "name": p.name,
+                "region": p.region,
+                "sub_region": p.sub_region,
+                "geopolitical": p.geopolitical,
+                "climate": p.climate,
+                "financial": p.financial,
+                "cyber": p.cyber,
+                "logistics": p.logistics,
+            }
+            for p in results
+        ]
